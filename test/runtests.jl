@@ -8,9 +8,9 @@ using Auton: CodeBlock, codeblocks
     @testset "code.jl" begin
 
         @testset "CodeBlock" begin
+            @test CodeBlock("x = 1", "python") isa CodeBlock{:python}
             @test CodeBlock("x = 1") isa CodeBlock{:julia}
             @test CodeBlock("x = 1", nothing) isa CodeBlock{:julia}
-            @test CodeBlock("x = 1", "python") isa CodeBlock{:python}
         end
 
         @testset "codeblocks" begin
@@ -27,5 +27,5 @@ using Auton: CodeBlock, codeblocks
         end
 
     end
-end
 
+end

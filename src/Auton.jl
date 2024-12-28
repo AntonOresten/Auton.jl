@@ -1,12 +1,14 @@
 module Auton
 
-include("code.jl")
+include("utils/utils.jl")
 
-include("llm.jl")
+include("highlight/highlight.jl")
 
-include("format/format.jl")
+include("codeblock.jl")
 
 include("repl-mode.jl")
-export autoexecute
+export autoexecute!, autoexecute
+
+@deprecate autoexecute(enable::Bool) autoexecute!(enable)
 
 end
