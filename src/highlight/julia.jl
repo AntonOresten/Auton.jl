@@ -7,8 +7,8 @@ function colorscheme()
     return (
         symbol      = :light_magenta,
         comment     = :black,
-        string      = :light_cyan,
-        call        = :light_cyan,
+        string      = :yellow,
+        call        = :light_green,
         op          = :light_red,
         keyword     = :light_red,
         text        = :default,

@@ -16,7 +16,16 @@ function codeblocks(input::AbstractString)
 end
 
 Base.run(block::CodeBlock) = @warn "Not running unknown language: $(language(block))"
-Base.run(m::Module, block::CodeBlock{:julia}) = Core.eval(m, Meta.parse("begin\n$(block.code)\nend"))
+
+function Base.run(m::Module, block::CodeBlock{:julia})
+    _display(x) = showdisplay(stdout, x)
+    _display(::Nothing) = nothing
+    expr = Meta.parse("begin\n$(block.code)\nend")
+    subexprs = filter(x -> !(x isa LineNumberNode), expr.args)
+    outputs = Any[Core.eval(m, subexpr) for subexpr in subexprs]
+    foreach(_display, outputs)
+end
+
 Base.run(block::CodeBlock{:julia}) = run(Main, block)
 Base.run(block::CodeBlock{:cmd}) = run(`sh -c $(block.code)`)
 

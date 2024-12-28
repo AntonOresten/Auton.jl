@@ -31,3 +31,19 @@ function tee_stdout(f::Function, io::IO)
         wait(relay_task)
     end
 end
+
+function tee_stdout(f::Function)
+    io = IOBuffer()
+    tee_stdout(io) do
+        f()
+    end
+    return String(take!(io))
+end
+
+# Base.display does not use stdout
+function showdisplay(io::IO, x)
+    show(IOContext(io, :limit=>true), MIME("text/plain"), x)
+    println()
+end
+
+showdisplay(x) = showdisplay(stdout, x)

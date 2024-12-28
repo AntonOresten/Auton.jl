@@ -1,5 +1,4 @@
 using ReplMaker: initrepl
-using PromptingTools: aigenerate, SystemMessage, UserMessage, AIMessage
 
 const _autoexecute = Ref(get(ENV, "AUTON_AUTOEXECUTE", "false") == "true")
 
@@ -17,24 +16,25 @@ end
 
 function auton_repl(input::AbstractString)
     model = "gpt-4o-mini"
-    printstyled("[ $model\n", color=:green)#println(box("", header=model, color=:green))
-    response = aigenerate(input; model, verbose=false, streamcallback=stdout)
+    printstyled("[ $model\n", color=:green) # println(box("", header=model, color=:green))
+    GlobalConversation.pushuser(input)
+    response = GlobalConversation.aigenerate(model)
+    GlobalConversation.push(response)
     println()
-    output_buffer = IOBuffer()
     block_outputs = []
     for block in codeblocks(response.content)
         println(box(string(block), header=language(block), color=:blue))
         precaution(block) && continue
-        tee_stdout(output_buffer) do
-            run(block)
-        end
-        push!(block_outputs, String(take!(output_buffer)))
+        push!(block_outputs, tee_stdout(() -> run(block)))
+        println()
     end
+    GlobalConversation.pushuser("The output of the code blocks was:\n" * join(block_outputs, "\n"))
     return nothing
 end
 
 function __init__()
     !isdefined(Base, :active_repl) && return nothing
+    GlobalConversation.init()
     initrepl(
         auton_repl,
         mode_name="auton",
