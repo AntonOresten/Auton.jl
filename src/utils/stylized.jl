@@ -8,11 +8,11 @@ function box(text::AbstractString; header=nothing, color=:normal)
     if length(lines) == 1
         output = colorcode*"[ "*resetcode*lines[1]*'\n'
     else
-        output = colorcode*"┌ "*resetcode*lines[1]*'\n'
+        output = colorcode*"┌─"*resetcode*lines[1]*'\n'
         for line in lines[2:end-1]
             output *= colorcode*"│ "*resetcode*line*'\n'
         end
-        output *= colorcode*"└ "*resetcode*lines[end]*'\n'
+        output *= colorcode*"└─"*resetcode*lines[end]*'\n'
     end
     
     output

@@ -1,2 +1,2 @@
-include("box.jl")
+include("stylized.jl")
 include("io.jl")
