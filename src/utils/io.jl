@@ -62,6 +62,65 @@ end
 showdisplay(x) = showdisplay(stdout, x)
 
 
+abstract type IORule end
+
+struct IOWithRule{Rule<:IORule} <: IO
+    io::IO
+    rule::Rule
+end
+
+create_rule(io::IO, rule::IORule) = IOWithRule(io, rule)
+
+(rule::IORule)(io::IO) = create_rule(io, rule)
+
+apply_rule(::IORule, data) = data
+
+write_rule(io::IOWithRule, data) = write(io.io, apply_rule(io.rule, data))
+
+Base.write(io::IOWithRule, data) = write_rule(io, data)
+Base.write(io::IOWithRule, data::Vector{UInt8}) = write_rule(io, data)
+Base.write(io::IOWithRule, s::Union{SubString{String}, String}) = write_rule(io, s)
+
+close_rule(::IO) = nothing
+close_rule(io::IOWithRule) = close_rule(io.io)
+
+Base.close(io::IOWithRule) = close_rule(io)
+
+
+struct Formatter <: IORule
+    func::Function
+end
+
+apply_rule(rule::Formatter, data) = rule.func(data)
+
+struct Color <: IORule
+    Color(color::Symbol) = Formatter(x -> Base.text_colors[color] * x)
+end
+
+
+struct Split <: IORule
+    split_func::Function
+end
+
+function write_rule(io::IOWithRule{Split}, data)
+    for subdata in io.rule.split_func(data)
+        write(io.io, subdata)
+    end
+end
+
+split_line(s::AbstractString, n::Integer) = @views [s[i:min(i+n-1, end)] for i in 1:n:length(s)]
+
+function add_newlines(strings::Vector{<:AbstractString})
+    n = length(strings)
+    return [i < n ? string(s, "\n") : s for (i, s) in enumerate(strings)]
+end
+
+struct LineSplit <: IORule
+    LineSplit(width::Integer=displaysize(stdout)[2] - 5) =
+        Split(line -> add_newlines(split_line(line, width)))
+end
+
+
 function format_block_line(
     prefix::AbstractString, content::AbstractString,
     prefix_color::Symbol=:blue, content_color::Symbol=:default,
@@ -69,94 +128,47 @@ function format_block_line(
     Base.text_colors[prefix_color] * "$prefix" * Base.text_colors[content_color] * content
 end
 
-
-abstract type IORule <: IO end
-
-close_rule(::IO) = nothing
-close_rule(io::IORule) = close_rule(io.parent)
-
-Base.close(io::IORule) = close_rule(io)
-
-struct Formatter <: IORule
-    parent::IO
-    formatter::Function
-end
-
-Formatter(f::Function, parent::IO) = Formatter(parent, f)
-
-function Base.write(io::Formatter, data::Union{SubString{String}, String})
-    write(io.parent, io.formatter(data))
-end
-
-Color(io::IO, color::Symbol) = Formatter(io, x -> Base.text_colors[color] * x)
-
-
-struct Split <: IORule
-    parent::IO
-    split_func::Function
-end
-
-function Base.write(io::Split, str::Union{SubString{String}, String})
-    for substr in io.split_func(str)
-        write(io.parent, substr)
-    end
-end
-
-
-split_line(s::AbstractString, n::Integer) = @views [s[i:min(i+n-1, end)] for i in 1:n:length(s)]
-
-# TODO: smart word-aware line split
-
-function LineSplit(io::IO, width::Integer=displaysize(stdout)[2] - 5)
-    return Split(io, s -> map(x -> x * "\n", split_line(s, width)))
-end
-
-
 struct Block <: IORule
-    parent::IO
     header::String
     color::Symbol
-
-    function Block(parent::IO, header::String, color::Symbol=:green)
-        block = new(parent, header, color)
-        println(stdout, format_block_line("╭─$header", "", block.color))
-        return block
-    end
 end
 
-function Base.write(io::Block, str::Union{SubString{String}, String})
-    print(stdout, format_block_line("│ ", "", io.color))
-    write(io.parent, str)
+function create_rule(io::IO, rule::Block)
+    print(io, format_block_line("╭─$(rule.header)", "\n", rule.color))
+    return IOWithRule(io, rule)
 end
 
-function close_rule(io::Block)
-    println(stdout, format_block_line("╰───┈─┈─┈┈┈ ┈ ┈", "", io.color))
+function write_rule(io::IOWithRule{Block}, str::Union{SubString{String}, String})
+    print(io.io, format_block_line("│ ", "", io.rule.color))
+    write(io.io, str)
+end
+
+function close_rule(io::IOWithRule{Block})
+    print(io.io, format_block_line("╰───┈─┈─┈┈┈ ┈ ┈", "\n", io.rule.color))
 end
 
 
 struct Lines <: IORule
-    parent::IO
     buffer::Vector{UInt8}
 end
 
-Lines(parent::IO=stdout) = Lines(parent, UInt8[])
+Lines() = Lines(UInt8[])
 
-function Base.write(io::Lines, str::Union{SubString{String}, String})
-    push!(io.buffer, codeunits(str)...)
+function write_rule(io::IOWithRule{Lines}, str::Union{SubString{String}, String})
+    push!(io.rule.buffer, codeunits(str)...)
     while true
-        last_newline_index = findfirst(x -> x == 0x0a, io.buffer)
+        last_newline_index = findfirst(x -> x == 0x0a, io.rule.buffer)
         if last_newline_index === nothing
             break
         end
-        to_flush = io.buffer[1:last_newline_index]
-        write(io.parent, String(to_flush))
-        deleteat!(io.buffer, 1:last_newline_index)
+        to_flush = io.rule.buffer[1:last_newline_index]
+        write(io.io, String(to_flush))
+        deleteat!(io.rule.buffer, 1:last_newline_index)
     end
     return nothing
 end
 
-function close_rule(io::Lines)
-    write(io, "\n")
-    close_rule(io.parent)
+function close_rule(io::IOWithRule{Lines})
+    write_rule(io, "\n")
+    close_rule(io.io)
 end
-
