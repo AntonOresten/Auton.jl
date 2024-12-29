@@ -62,9 +62,24 @@ end
 showdisplay(x) = showdisplay(stdout, x)
 
 
-struct Formatter{T<:IO,F<:Function} <: IO
-    parent::T
-    formatter::F
+function format_block_line(
+    prefix::AbstractString, content::AbstractString,
+    prefix_color::Symbol=:blue, content_color::Symbol=:default,
+)
+    Base.text_colors[prefix_color] * "$prefix" * Base.text_colors[content_color] * content
+end
+
+
+abstract type IORule <: IO end
+
+close_rule(::IO) = nothing
+close_rule(io::IORule) = close_rule(io.parent)
+
+Base.close(io::IORule) = close_rule(io)
+
+struct Formatter <: IORule
+    parent::IO
+    formatter::Function
 end
 
 Formatter(f::Function, parent::IO) = Formatter(parent, f)
@@ -73,9 +88,54 @@ function Base.write(io::Formatter, data::Union{SubString{String}, String})
     write(io.parent, io.formatter(data))
 end
 
+Color(io::IO, color::Symbol) = Formatter(io, x -> Base.text_colors[color] * x)
 
-struct Lines{T<:IO} <: IO
-    parent::T
+
+struct Split <: IORule
+    parent::IO
+    split_func::Function
+end
+
+function Base.write(io::Split, str::Union{SubString{String}, String})
+    for substr in io.split_func(str)
+        write(io.parent, substr)
+    end
+end
+
+
+split_line(s::AbstractString, n::Integer) = @views [s[i:min(i+n-1, end)] for i in 1:n:length(s)]
+
+# TODO: smart word-aware line split
+
+function LineSplit(io::IO, width::Integer=displaysize(stdout)[2] - 5)
+    return Split(io, s -> map(x -> x * "\n", split_line(s, width)))
+end
+
+
+struct Block <: IORule
+    parent::IO
+    header::String
+    color::Symbol
+
+    function Block(parent::IO, header::String, color::Symbol=:green)
+        block = new(parent, header, color)
+        println(stdout, format_block_line("╭─$header", "", block.color))
+        return block
+    end
+end
+
+function Base.write(io::Block, str::Union{SubString{String}, String})
+    print(stdout, format_block_line("│ ", "", io.color))
+    write(io.parent, str)
+end
+
+function close_rule(io::Block)
+    println(stdout, format_block_line("╰───┈─┈─┈┈┈ ┈ ┈", "", io.color))
+end
+
+
+struct Lines <: IORule
+    parent::IO
     buffer::Vector{UInt8}
 end
 
@@ -95,4 +155,8 @@ function Base.write(io::Lines, str::Union{SubString{String}, String})
     return nothing
 end
 
-Base.println(io::Lines) = write(io, "\n")
+function close_rule(io::Lines)
+    write(io, "\n")
+    close_rule(io.parent)
+end
+

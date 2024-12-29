@@ -35,23 +35,20 @@ function Base.string(ctx::OutputContext)
     """
 end
 
-function format_response_line(prefix::AbstractString, content::AbstractString)
-    Base.text_colors[:blue] * "$prefix" * Base.text_colors[:black] * content
-end
-
 function auton_repl(input::AbstractString)
     GlobalConversation.pushuser(input)
     model = "gpt-4o-mini"
-    println(format_response_line("╭─$model", ""))
-    streamcallback = Lines(Formatter(content -> format_response_line("│ ", content), stdout))
+    streamcallback = Lines((Block(Color(stdout, :light_black), model, :blue)))
     response = GlobalConversation.aigenerate(model; streamcallback)
-    println(streamcallback) #println(format_response_line("╰─", String(streamcallback.buffer)))
-    println(format_response_line("╰────┈─┈─┈┈┈┈ ┈ ┈", ""))
+    close(streamcallback)
     println()
     GlobalConversation.push(response)
     ctx = OutputContext("", "")
     for block in filter(block -> language(block) != NO_LANGUAGE, codeblocks(response.content))
-        println(box(string(block), header=language(block), color=:green))
+        block_io = Lines(Block(stdout, string(language(block)), :green))
+        write(block_io, string(block))
+        close(block_io)
+        println()
         precaution(block) && continue
         push_tee(ctx) do
             run(block)
