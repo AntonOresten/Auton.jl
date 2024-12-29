@@ -9,8 +9,8 @@ using Auton: CodeBlock, codeblocks
 
         @testset "CodeBlock" begin
             @test CodeBlock("x = 1", "python") isa CodeBlock{:python}
-            @test CodeBlock("x = 1") isa CodeBlock{:julia}
-            @test CodeBlock("x = 1", nothing) isa CodeBlock{:julia}
+            @test CodeBlock("x = 1") isa CodeBlock{Auton.NO_LANGUAGE}
+            @test CodeBlock("x = 1", nothing) isa CodeBlock{Auton.NO_LANGUAGE}
         end
 
         @testset "codeblocks" begin
@@ -23,7 +23,7 @@ using Auton: CodeBlock, codeblocks
             ```
             """
             @test codeblocks(code) ==
-                CodeBlock[CodeBlock("x = 1"), CodeBlock("print(\"Hello, world!\")", "python")]
+                CodeBlock[CodeBlock("x = 1", "julia"), CodeBlock("print(\"Hello, world!\")", "python")]
         end
 
     end
