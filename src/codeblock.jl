@@ -20,19 +20,16 @@ Base.run(block::CodeBlock) = @warn "Not running unknown language: $(language(blo
 
 function Base.run(m::Module, block::CodeBlock{:julia})
     # optionally call _show on each subexpr for verbose context
-    #_show(x) = showdisplay(stdout, x)
-    #_show(::Nothing) = nothing
+    _show(x) = showdisplay(stdout, x)
+    _show(::Nothing) = nothing
     expr = Meta.parse("begin\n$(block.code)\nend")
     subexprs = filter(x -> !(x isa LineNumberNode), expr.args)
-    foreach(subexpr -> Core.eval(m, subexpr), subexprs)
+    foreach(subexpr -> _show(Core.eval(m, subexpr)), subexprs)
 end
 
 Base.run(block::CodeBlock{:julia}) = run(Main, block)
 Base.run(block::CodeBlock{:cmd}) = run(`sh -c $(block.code)`)
 
-highlighted(block::CodeBlock) = block.code
-highlighted(block::CodeBlock{:julia}) = JuliaHighlighting.highlight(block.code)
-
-Base.string(block::CodeBlock; highlight=true) = highlight ? highlighted(block) : block.code
-
-Base.show(io::IO, ::MIME"text/plain", block::CodeBlock) = print(io, string(block))
+function Base.show(io::IO, ::MIME"text/plain", block::CodeBlock)
+    print(io, "```$(language(block))\n$(block.code)\n```")
+end
