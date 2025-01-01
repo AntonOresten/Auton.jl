@@ -31,7 +31,7 @@ function tee_stdout(f::Function, out::IO=IOBuffer())
     return out
 end
 
-function show_truncated_backtrace(io::IO, e::Exception; target=nothing)
+function show_truncated_backtrace(io::IO; target=nothing)
     bt = catch_backtrace()
     frames = stacktrace(bt)
     idx = isnothing(target) ? nothing : findfirst(fr -> occursin(target, repr(fr)), frames)
@@ -51,7 +51,7 @@ function tee_stdout_with_stderr(f::Function; out::IO=IOBuffer(), err::IO=IOBuffe
         catch e
             print(Base.text_colors[:light_red], Base.text_colors[:bold], "ERROR: ", Base.text_colors[:normal])
             showerror(err, e)
-            show_truncated_backtrace(err, e; target)
+            show_truncated_backtrace(err; target)
         end
     end
     return out, err

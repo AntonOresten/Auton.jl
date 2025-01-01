@@ -32,8 +32,9 @@ function auton_repl(
     end
     response_chunk = MessageChunk([response])
     push!(conversation, response_chunk)
-    println()
+
     for block in filter(block -> language(block) != NO_LANGUAGE, codeblocks(response.content))
+        println()
         code_block_rules(language(block))(stdout) do io
             print(io, Highlight.highlight(Val(:julia), block.code))
         end

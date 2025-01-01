@@ -25,9 +25,6 @@ workflow by generating valid Julia code blocks in markdown format. The code bloc
 that you generate will be automatically executed and the output will be displayed
 once you have made a full response.
 
-Each block is executed in order, and each expression in each block is displayed
-in the output that you will see, so print statements should be used sparingly.
-
 If given code, you should repeat it back in a code block, with any needed corrections.
 Keep reasoning concise, focusing mainly on code.
 """
