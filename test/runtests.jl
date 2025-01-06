@@ -29,8 +29,8 @@ using Auton: CodeBlock, codeblocks
             ```
             """
             @test codeblocks(code) ==
-                CodeBlock[CodeBlock("\"\"\"\n```jldoctest\njulia> x\n1\n```\n\"\"\"\nconst x = 1\n", "julia"),
-                          CodeBlock("print(\"Hello, world!\")\n", "python")]
+                CodeBlock[CodeBlock("\"\"\"\n```jldoctest\njulia> x\n1\n```\n\"\"\"\nconst x = 1", "julia"),
+                          CodeBlock("print(\"Hello, world!\")", "python")]
         end
 
     end
