@@ -5,7 +5,7 @@ using Auton: CodeBlock, codeblocks
 
 @testset "Auton.jl" begin
     
-    @testset "code.jl" begin
+    @testset "codeblock.jl" begin
 
         @testset "CodeBlock" begin
             @test CodeBlock("x = 1", "python") isa CodeBlock{:python}
@@ -16,14 +16,21 @@ using Auton: CodeBlock, codeblocks
         @testset "codeblocks" begin
             code = """
             ```julia
-            x = 1
+            \"\"\"
+            ```jldoctest
+            julia> x
+            1
+            ```
+            \"\"\"
+            const x = 1
             ```
             ```python
             print("Hello, world!")
             ```
             """
             @test codeblocks(code) ==
-                CodeBlock[CodeBlock("x = 1", "julia"), CodeBlock("print(\"Hello, world!\")", "python")]
+                CodeBlock[CodeBlock("\"\"\"\n```jldoctest\njulia> x\n1\n```\n\"\"\"\nconst x = 1\n", "julia"),
+                          CodeBlock("print(\"Hello, world!\")\n", "python")]
         end
 
     end

@@ -1,61 +1,62 @@
 using ReplMaker: initrepl
+
+using .Highlight: highlight
 using .IORules: Lines, LineSplit, Block, Color
-
 model_response_rules(model) = Lines() ∘ LineSplit() ∘ Block(model, :blue) ∘ Color(:light_black)
-
 code_block_rules(language) = Lines() ∘ Block(language, :green)
 
-function context_repl(input::AbstractString, conversation::Conversation=default_conversation[])
-    chunk = MessageChunk([UserMessage("```julia\n$input\n```")])
-    push!(conversation, chunk)
-    block = CodeBlock(input, :julia)
-    out, err = tee_stdout_with_stderr(target="top-level scope") do
-        run(block)
+function run_code(code::CodeBlock)
+    out, err = tee_stdout_with_stderr(target=string(typeof(code))) do
+        run(code)
     end
-    _, err_msg = add_context(chunk, out, err)
-    if !isempty(err_msg)
-        println(err_msg)
-    end
+    return read(seekstart(out), String), read(seekstart(err), String)
+end
+
+function context_repl(input::AbstractString, state::ConversationState=convstate())
+    push!(state.conversation, PromptingTools.UserMessage("```julia\n$input\n```"))
+    out, err = run_code(CodeBlock(input, :julia))
+    push_context!(state.conversation, out, err)
+    !isempty(err) && println(err)
     return nothing
 end
 
-function auton_repl(
-    input::AbstractString, conversation::Conversation=default_conversation[];
-    model="gpt-4o",
-)
-    query = UserMessage(input)
-    query_chunk = MessageChunk([query])
-    push!(conversation, query_chunk)
+function auton_repl(input::AbstractString, state::ConversationState=convstate())
+    push!(state.conversation, PromptingTools.UserMessage(input))
+    println()
+    model_iteration(state)
+end
 
-    response = model_response_rules(model)(stdout) do streamcallback
-        PromptingTools.aigenerate(reduce(vcat, conversation); model, streamcallback, verbose=false)
+function model_iteration(state::ConversationState; i=0)
+    response = model_response_rules(state.model)(stdout) do streamcallback
+        PromptingTools.aigenerate(state.conversation; state.model, streamcallback, verbose=false)
     end
-    response_chunk = MessageChunk([response])
-    push!(conversation, response_chunk)
+    push!(state.conversation, response)
 
-    for block in filter(block -> language(block) != NO_LANGUAGE, codeblocks(response.content))
+    blocks = filter(block -> language(block) != NO_LANGUAGE, codeblocks(response.content))
+    for block in blocks
         println()
         code_block_rules(language(block))(stdout) do io
-            print(io, Highlight.highlight(Val(:julia), block.code))
+            print(io, highlight(language(block), block.code))
         end
         println()
-        # FIXME: this is a hack to get the backtrace to show fewer frames
-        out, err = tee_stdout_with_stderr(target="CodeBlock{:julia}") do
-            run(block)
-        end
-        _, err_msg = add_context(response_chunk, out, err)
-        if !isempty(err_msg)
-            println(err_msg)
+        out, err = run_code(block)
+        push_context!(state.conversation, out, err)
+        if !isempty(err)
+            println(err)
             break
         end
+    end
+
+    if i < 5 && !isempty(blocks)
+        println()
+        model_iteration(state; i=i+1)
     end
 
     return nothing
 end
 
 function __init__()
-    init_default_conversation()
-    !isdefined(Base, :active_repl) && return nothing
+    isdefined(Base, :active_repl) && return nothing
     initrepl(
         context_repl,
         mode_name="auton_context",
@@ -69,6 +70,6 @@ function __init__()
         start_key='=',
         prompt_text="auton> ",
         prompt_color=:cyan,
-        valid_input_checker=Returns(false)
+        valid_input_checker=Returns(true)
     )
 end

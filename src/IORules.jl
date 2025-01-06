@@ -115,7 +115,7 @@ end
 Lines() = Lines(UInt8[])
 
 function write_rule(io::IOWithRule{Lines}, str::Union{SubString{String}, String})
-    push!(io.rule.buffer, codeunits(str)...)
+    append!(io.rule.buffer, codeunits(str))
     while true
         last_newline_index = findfirst(x -> x == 0x0a, io.rule.buffer)
         if last_newline_index === nothing

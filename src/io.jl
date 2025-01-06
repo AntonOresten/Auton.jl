@@ -7,7 +7,7 @@ function tee_stdout(f::Function, out::IO=IOBuffer())
                 chunk = readavailable(rd)
                 if !isempty(chunk)
                     write(out, chunk)
-                    write(old_stdout, chunk)
+                    write(IOContext(old_stdout, :color=>true), chunk)
                     flush(old_stdout)
                 elseif eof(rd)
                     break
@@ -39,10 +39,8 @@ function show_truncated_backtrace(io::IO; target=nothing)
         frames = frames[1:idx]
     end
     new_bt = Base.StackTraces.StackTrace(frames)
-    print(io)
     Base.show_backtrace(io, new_bt)
 end
-
 
 function tee_stdout_with_stderr(f::Function; out::IO=IOBuffer(), err::IO=IOBuffer(), target=nothing)
     tee_stdout(out) do
@@ -50,8 +48,8 @@ function tee_stdout_with_stderr(f::Function; out::IO=IOBuffer(), err::IO=IOBuffe
             f()
         catch e
             print(Base.text_colors[:light_red], Base.text_colors[:bold], "ERROR: ", Base.text_colors[:normal])
-            showerror(err, e)
-            show_truncated_backtrace(err; target)
+            showerror(IOContext(err, :color=>true), e)
+            show_truncated_backtrace(IOContext(err, :color=>true); target)
         end
     end
     return out, err
