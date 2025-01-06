@@ -56,7 +56,7 @@ function model_iteration(state::ConversationState; i=0)
 end
 
 function __init__()
-    isdefined(Base, :active_repl) && return nothing
+    !isdefined(Base, :active_repl) && return nothing
     initrepl(
         context_repl,
         mode_name="auton_context",
