@@ -42,14 +42,17 @@ function show_truncated_backtrace(io::IO; target=nothing)
     Base.show_backtrace(io, new_bt)
 end
 
+print_error_header(io::IO) = print(io, Base.text_colors[:light_red], Base.text_colors[:bold], "ERROR: ", Base.text_colors[:normal])
+
 function tee_stdout_with_stderr(f::Function; out::IO=IOBuffer(), err::IO=IOBuffer(), target=nothing)
     tee_stdout(out) do
         try
             f()
         catch e
-            print(Base.text_colors[:light_red], Base.text_colors[:bold], "ERROR: ", Base.text_colors[:normal])
-            showerror(IOContext(err, :color=>true), e)
-            show_truncated_backtrace(IOContext(err, :color=>true); target)
+            ctx = IOContext(err, :color=>true)
+            print_error_header(ctx)
+            showerror(ctx, e)
+            show_truncated_backtrace(ctx; target)
         end
     end
     return out, err

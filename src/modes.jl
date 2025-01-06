@@ -1,4 +1,5 @@
 using ReplMaker: initrepl
+using REPL.LineEdit: EmptyCompletionProvider
 
 using .Highlight: highlight
 using .IORules: Lines, LineSplit, Block, Color
@@ -28,7 +29,11 @@ end
 
 function model_iteration(state::ConversationState; i=0)
     response = model_response_rules(state.model)(stdout) do streamcallback
-        PromptingTools.aigenerate(state.conversation; state.model, streamcallback, verbose=false)
+        if state.schema isa PromptingTools.AbstractPromptSchema
+            PromptingTools.aigenerate(state.schema, state.conversation; model=state.model, streamcallback, verbose=false)
+        else
+            PromptingTools.aigenerate(state.conversation; model=state.model, streamcallback, verbose=false)
+        end
     end
     push!(state.conversation, response)
 
@@ -70,6 +75,7 @@ function __init__()
         start_key='=',
         prompt_text="auton> ",
         prompt_color=:cyan,
-        valid_input_checker=Returns(true)
+        valid_input_checker=Returns(true),
+        completion_provider=EmptyCompletionProvider(),
     )
 end

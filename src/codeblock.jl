@@ -12,18 +12,13 @@ CodeBlock(code, ::Nothing) = CodeBlock(code)
 
 Base.run(block::CodeBlock) = @warn "Not running unknown language: $(language(block))"
 
+# TODO: feed some limited text representation of each subexpression to the context
+# using showdisplay, going through stdout.
+# showdisplay doesn't work for things that don't have a text representation.
 function Base.run(m::Module, block::CodeBlock{:julia})
-    # optionally call _show on each subexpr for verbose context
-     _show(x) = showdisplay(stdout, x)
-     _show(::Nothing) = nothing
-    expr = Meta.parse("begin\n$(block.code)\nend")
-    subexprs = expr.args # filter(x -> !(x isa LineNumberNode), expr.args)
-    _eval(x) = Core.eval(m, x)
-    for (i, subexpr) in enumerate(subexprs)
-        ret = Core.eval(m, subexpr)
-        i == length(subexprs) && _show(ret)
-    end
-    return nothing
+    _display(::Nothing) = nothing
+    _display(x) = display(x)
+    Core.eval(m, Meta.parse("begin\n$(block.code)\nend")) |> _display
 end
 
 Base.run(block::CodeBlock{:julia}) = run(Main, block)
@@ -59,7 +54,7 @@ function codeblocks(md::AbstractString)
                     nesting -= 1
                     println(buf, line)
                 else
-                    push!(blocks, CodeBlock(String(take!(buf)), lang))
+                    push!(blocks, CodeBlock(String(take!(buf)) |> strip, lang))
                     in_block = false
                     lang     = ""
                 end
