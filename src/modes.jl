@@ -27,20 +27,13 @@ function auton_repl(input::AbstractString, state::ConversationState=convstate())
     model_iteration(state)
 end
 
-function get_response(; schema, model, conversation, streamcallback, kwargs...)
-    _streamcallback = contains("gemini")(model) ? nothing : streamcallback
-    response = if isnothing(schema)
-        PromptingTools.aigenerate(conversation; streamcallback=_streamcallback, kwargs...)
-    else
-        PromptingTools.aigenerate(schema, conversation; streamcallback=_streamcallback, kwargs...)
-    end
-    isnothing(_streamcallback) && print(streamcallback, response.content)
-    return response
-end
-
 function model_iteration(state::ConversationState; i=0)
     response = model_response_rules(state.model)(stdout) do streamcallback
-        get_response(; state.schema, state.conversation, streamcallback, state.model, verbose=false)
+        if isnothing(state.schema)
+            PromptingTools.aigenerate(state.conversation; streamcallback, state.model, verbose=false)
+        else
+            PromptingTools.aigenerate(state.schema, state.conversation; streamcallback, state.model, verbose=false)
+        end
     end
     push!(state.conversation, response)
 
