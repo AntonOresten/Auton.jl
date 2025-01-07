@@ -12,7 +12,7 @@ Auton does *not* intercept the outputs of any calls made outside of these modes.
 
 ## Models
 
-Auton uses PromptingTools.jl to manage conversations and stream responses, and thus any model and schema.
+Auton uses PromptingTools.jl to manage conversations and stream responses, and can thus handle any model and schema.
 
 GoogleGenAI.jl (which is used by PromptingTools.jl for Gemini models) does not seem to support streaming, so those models are currently not supported by Auton.
 

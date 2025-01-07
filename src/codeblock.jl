@@ -18,11 +18,18 @@ Base.run(block::CodeBlock) = @warn "Not running unknown language: $(language(blo
 function Base.run(m::Module, block::CodeBlock{:julia})
     _display(::Nothing) = nothing
     _display(x) = display(x)
-    Core.eval(m, Meta.parse("begin\n$(block.code)\nend")) |> _display
+    expr = Meta.parse("begin\n$(block.code)\nend")
+    subexprs = expr.args # filter(x -> !(x isa LineNumberNode), expr.args)
+    _eval(x) = Core.eval(m, x)
+    for (i, subexpr) in enumerate(subexprs)
+        ret = Core.eval(m, subexpr)
+        i == length(subexprs) && _display(ret)
+    end
+    return nothing
 end
 
 Base.run(block::CodeBlock{:julia}) = run(Main, block)
-Base.run(block::CodeBlock{:shell}) = run(`sh -c $(block.code)`)
+Base.run(block::CodeBlock{:sh}) = run(`sh -c $(block.code)`)
 
 function Base.show(io::IO, ::MIME"text/plain", block::CodeBlock)
     print(io, "```$(language(block))\n$(block.code)\n```")
