@@ -27,13 +27,19 @@ function auton_repl(input::AbstractString, state::ConversationState=convstate())
     model_iteration(state)
 end
 
+function get_response(; schema=nothing, conversation, streamcallback, kwargs...)
+    try
+        isnothing(schema) && return PromptingTools.aigenerate(conversation; streamcallback, kwargs...)
+        return PromptingTools.aigenerate(schema, conversation; streamcallback, kwargs...)
+    catch
+        isnothing(streamcallback) && rethrow()
+        get_response(; schema, conversation, streamcallback=nothing, kwargs...)
+    end
+end
+
 function model_iteration(state::ConversationState; i=0)
     response = model_response_rules(state.model)(stdout) do streamcallback
-        if state.schema isa PromptingTools.AbstractPromptSchema
-            PromptingTools.aigenerate(state.schema, state.conversation; model=state.model, streamcallback, verbose=false)
-        else
-            PromptingTools.aigenerate(state.conversation; model=state.model, streamcallback, verbose=false)
-        end
+        get_response(; state.schema, state.conversation, streamcallback, state.model, verbose=false)
     end
     push!(state.conversation, response)
 

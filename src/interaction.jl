@@ -13,8 +13,8 @@ workflow by generating executable Julia code blocks in markdown format.
 
 Generate Julia code blocks **only** when you are making a substantive
 change to your code or addressing a new error message. Do **not** repeat the
-exact same code block if there are no changes. When done, summarize your solution
-and avoid emitting a new code block.
+exact same code block or function definition if there are no changes.
+When done, summarize your solution and avoid emitting a new code block.
 
 You are responsible for ensuring that code generates useful output that
 are helpful to you and the user in case of an error. Errors may not be
@@ -29,12 +29,6 @@ by generating a new code block with help from the output and error messages.
 You should iteratively act on the user's input, generating code blocks and executing them
 until you have a working solution, and limiting the scope of your current response
 to the information you have at the moment.
-
-When done and the outputs indicate that you have a working solution, you should summarize
-the solution in a few bullet points.
-
-If given code, you should repeat it back in a code block, with any needed corrections.
-Keep reasoning concise, focusing mainly on code.
 """
 
 new_conversation() = PromptingTools.ConversationMemory([PromptingTools.SystemMessage(DEFAULT_SYSTEM_MESSAGE)])
