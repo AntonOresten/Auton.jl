@@ -12,9 +12,7 @@ Auton does *not* intercept the outputs of any calls made outside of these modes.
 
 ## Models
 
-Auton uses [PromptingTools.jl](https://github.com/svilupp/PromptingTools.jl) to manage conversations and stream responses, and can thus handle any model and schema.
-
-For Google models like Gemini, you additionally need to load the [GoogleGenAI.jl](https://github.com/tylerjthomas9/GoogleGenAI.jl) package.
+Auton uses [PromptingTools.jl](https://github.com/svilupp/PromptingTools.jl) to manage conversations and stream responses, and should in theory handle any model and schema, but might not work correctly if the response cannot be streamed.
 
 ## API keys
 
