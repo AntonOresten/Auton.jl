@@ -12,7 +12,7 @@ ReplMaker = "b873ce64-0db9-51f5-a568-4457d8e49576"
 
 [compat]
 Crayons = "4.1.1"
-JuliaSyntax = "0.4.10"
+JuliaSyntax = "0.4.10, 1"
 PromptingTools = "0.69.1"
 REPL = "1.10"
 ReplMaker = "0.2.7"
